@@ -7,6 +7,7 @@
 1. Add `<script src="callout.js"></script>` to your website
 2. Add a quotation with `<blockquote>` tag to your website
 3. Add a `<p>...</p>` tag inside a `<blockquote>` tag as a title, with the text prefix "![INFO] " in front of the title(space is required)
+4. If the DOM changes after initialization and new callouts are added, simply call `document.Callout.createBlockquotes()`.
 
 ## Example
 
