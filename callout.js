@@ -89,8 +89,10 @@ const Callout =
 
             // this.convertBlockquotes();
 
-            const blockquotes = document.querySelectorAll('blockquote');
-            blockquotes.forEach(blockquote => {this.processBlockquote(blockquote)});
+            this.createBlockquotes();
+
+            // const blockquotes = document.querySelectorAll('blockquote');
+            // blockquotes.forEach(blockquote => {this.processBlockquote(blockquote)});
         },
         // 和obsidian相同
         getType: function(typeName)
@@ -297,29 +299,17 @@ const Callout =
         },
         adjustColor: function(color, amount) {
             return '#' + color.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount * 255)).toString(16)).substr(-2));
+        },
+        createBlockquotes: function()
+        {
+            const blockquotes = document.querySelectorAll('blockquote');
+            blockquotes.forEach(blockquote => {this.processBlockquote(blockquote)});
         }
 };
 
-function setupMutationObserver() {
-    const targetNode = document.body;
-  
-    const config = { 
-      childList: true,
-      subtree: true,
-      characterData: true,
-    };
-  
-    const callback = function(mutationsList, observer) {
-        const blockquotes = document.querySelectorAll('blockquote');
-        blockquotes.forEach(blockquote => {this.processBlockquote(blockquote)});
-    };
-  
-    const observer = new MutationObserver(callback);
-      observer.observe(targetNode, config);
-  }
-
 const CalloutExpot = {
     init: Callout.init,
+    createBlockquotes: Callout.createBlockquotes,
 }
 
 Callout.init();
