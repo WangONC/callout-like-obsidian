@@ -313,5 +313,4 @@ const CalloutExpot = {
 }
 
 Callout.init();
-setupMutationObserver();
 document.Callout = CalloutExpot;
