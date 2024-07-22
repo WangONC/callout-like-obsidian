@@ -1,6 +1,8 @@
 # Callout
 
 **Callout** is used to generate callouts similar to those in Obsidian on web pages.
+
+Download and open demo.html to view the effect
   
 ## Usage
 
