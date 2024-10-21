@@ -95,21 +95,22 @@ const Callout =
             // blockquotes.forEach(blockquote => {this.processBlockquote(blockquote)});
         },
         // 和obsidian相同
-        getType: function(typeName)
-        {
-            if(typeName in ["note"]) return "NOTE";
-            else if(typeName in ["abstract", "summary", "tldr"]) return "ABSTRACT";
-            else if(typeName in ["info"]) return "INFO";
-            else if(typeName in ["todo"]) return "TODO";
-            else if(typeName in ["tip", "hint", "important"]) return "TIP";
-            else if(typeName in ["success", "check", "done"]) return "SUCCESS";
-            else if(typeName in ["question", "help", "faq"]) return "QUESTION";
-            else if(typeName in ["warning", "caution", "attention"]) return "WARNING";
-            else if(typeName in ["failure", "fail", "missing"]) return "FAILURE";
-            else if(typeName in ["danger", "error"]) return "DANGER";
-            else if(typeName in ["bug"]) return "BUG";
-            else if(typeName in ["example"]) return "EXAMPLE";
-            else if(typeName in ["quote", "cite"]) return "QUOTE";
+        getType: function(typeName) {
+            typeName = typeName.toLowerCase();  // 将 typeName 转换为小写
+            
+            if (["note"].includes(typeName)) return "NOTE";
+            else if (["abstract", "summary", "tldr"].includes(typeName)) return "ABSTRACT";
+            else if (["info"].includes(typeName)) return "INFO";
+            else if (["todo"].includes(typeName)) return "TODO";
+            else if (["tip", "hint", "important"].includes(typeName)) return "TIP";
+            else if (["success", "check", "done"].includes(typeName)) return "SUCCESS";
+            else if (["question", "help", "faq"].includes(typeName)) return "QUESTION";
+            else if (["warning", "caution", "attention"].includes(typeName)) return "WARNING";
+            else if (["failure", "fail", "missing"].includes(typeName)) return "FAILURE";
+            else if (["danger", "error"].includes(typeName)) return "DANGER";
+            else if (["bug"].includes(typeName)) return "BUG";
+            else if (["example"].includes(typeName)) return "EXAMPLE";
+            else if (["quote", "cite"].includes(typeName)) return "QUOTE";
             else return typeName.toUpperCase();
         },
         // from https://help.obsidian.md/Editing+and+formatting/Callouts#Supported%20types
