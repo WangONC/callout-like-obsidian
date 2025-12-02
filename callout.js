@@ -1,4 +1,4 @@
- function matchRecursion(reg,str)
+function matchRecursion(reg,str)
 {
     var i = str.match(reg);
     if(i && i[1]) return str = str.replace(reg,""),[i[1]].concat(matchRecursion(reg,str));
@@ -17,7 +17,7 @@ function parseElement(htmlString)
     return new DOMParser().parseFromString(htmlString,'text/html').body.childNodes[0];
 }
 
-const Callout = 
+const Callout =
 {
     init: function() {
         // 添加 FontAwesome
@@ -25,7 +25,7 @@ const Callout =
         link.rel = 'stylesheet';
         link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css';
         document.head.appendChild(link);
-        
+
         // 添加 CSS
         const style = document.createElement('style');
         style.textContent = `
@@ -102,11 +102,11 @@ const Callout =
 
         this.createBlockquotes();
     },
-    
+
     // 和obsidian相同
     getType: function(typeName) {
         typeName = typeName.toLowerCase();
-        
+
         if (["note"].includes(typeName)) return "NOTE";
         else if (["abstract", "summary", "tldr"].includes(typeName)) return "ABSTRACT";
         else if (["info"].includes(typeName)) return "INFO";
@@ -122,7 +122,7 @@ const Callout =
         else if (["quote", "cite"].includes(typeName)) return "QUOTE";
         else return typeName.toUpperCase();
     },
-    
+
     // from https://help.obsidian.md/Editing+and+formatting/Callouts#Supported%20types
     getIcon: function(type) {
         const icons = {
@@ -142,7 +142,7 @@ const Callout =
         };
         return icons[type.toUpperCase()] || icons["INFO"];
     },
-    
+
     // 标题和其他部分主题颜色
     getColor: function(type) {
         const colors = {
@@ -162,7 +162,7 @@ const Callout =
         };
         return colors[type.toUpperCase()] || colors["INFO"];
     },
-    
+
     // callout背景颜色
     // from https://help.obsidian.md/Editing+and+formatting/Callouts#Supported%20types
     getBackgoundColor: function(type) {
@@ -183,40 +183,18 @@ const Callout =
         };
         return colors[type.toUpperCase()] || colors["INFO"];
     },
-    
-    // 通用的懒加载触发方法
-    triggerLazyLoad: function(element) {
-        // 触发滚动事件
+
+    // 通用的懒加载触发方法（适用于任何懒加载库）
+    triggerLazyLoad: function() {
         window.dispatchEvent(new Event('scroll'));
-        // 触发 resize 事件
         window.dispatchEvent(new Event('resize'));
     },
-    
-    // 处理懒加载图片的显示/隐藏
-    handleLazyLoadImages: function(callout, shouldShow) {
-        const content = callout.querySelector('.callout-content');
-        if (!content) return;
-        
-        const images = content.querySelectorAll('img[data-original]');
-        
-        images.forEach(img => {
-            if (shouldShow) {
-                img.style.display = ''; 
-            } else {
-                img.style.display = 'none';
-            }
-        });
-        if (shouldShow) {
-            this.triggerLazyLoad(callout);
-        }
-    },
-    
+
     // 替换操作
     processBlockquote: function(blockquote) {
         var titleNode;
-        var contentNode;
+        var firstParagraph = null;
 
-        const content = blockquote.innerHTML.trim();
         var tags = [];
         var isCollapsible = 0;
         var backgroundColor = this.getBackgoundColor("INFO");
@@ -225,176 +203,203 @@ const Callout =
         var title = "";
         var typeName = "INFO";
 
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = blockquote.innerHTML.trim();
-        const children = Array.from(tempDiv.childNodes);
-        
-        // 检查第一个子元素是否为 <p>
-        if (children.length > 0 && children[0].tagName && children[0].tagName.toLowerCase() == 'p') {
-            titleNode = children[0].innerHTML;
-            children.shift();
+        // 直接获取原始子节点，不要用 innerHTML 重建
+        const children = Array.from(blockquote.childNodes);
+
+        // 找到第一个 <p> 元素节点（跳过文本节点）
+        for (let i = 0; i < children.length; i++) {
+            const node = children[i];
+            if (node.nodeType === 1 && node.tagName.toLowerCase() === 'p') {
+                firstParagraph = node;
+                titleNode = node.innerHTML;
+                break;
+            }
         }
-        
-        contentNode = children.map(el => {
-            if(el.nodeType == Node.TEXT_NODE) return el.data; 
-            else return el.outerHTML;
-        }).join('');
-        
-        if(!titleNode) return;
+
+        if(!titleNode) {
+            blockquote.style.opacity = '';
+            blockquote.style.transition = '';
+            return;
+        }
 
         // 匹配带有[!xxxx]的标签，判断是否是callout
-        if (titleNode.match(/^\[!(.*?)\]([-+]?)(.*)/g)) {
-            tags = matchRecursion(/^\[!([^\[\]]*?)\]/, titleNode);
-            titleNode = replaceRecursion(/^\[!([^\[\]]*?)\]/, titleNode);
+        if (!titleNode.match(/^\[!(.*?)\]([-+]?)(.*)/g)) {
+            blockquote.style.opacity = '';
+            blockquote.style.transition = '';
+            return;
+        }
 
-            if(titleNode.match(/^((-\s)|(-(?!\S)))/)) isCollapsible = 1;
-            else if(titleNode.match(/^((\+\s)|(\+(?!\S)))/)) isCollapsible = 2;
-            if(isCollapsible) titleNode = titleNode.replace(/^(([+-]\s)|([+-](?!\S)))/, "");
-            else titleNode = titleNode.replace(/^[ \r\t]/, "");
-            title = titleNode;
+        tags = matchRecursion(/^\[!([^\[\]]*?)\]/, titleNode);
+        titleNode = replaceRecursion(/^\[!([^\[\]]*?)\]/, titleNode);
 
-            tags.forEach((value) => {
-                if(!value.startsWith("TITLE") && !value.startsWith("BACKGROUND") && !value.startsWith("ICON")) {
-                    typeName = value;
-                }
-            });
-            
-            if(!title) title = typeName;
-            titleColor = this.getColor(this.getType(typeName));
-            backgroundColor = this.getBackgoundColor(this.getType(typeName));
-            icon = this.getIcon(this.getType(typeName));
+        if(titleNode.match(/^((-\s)|(-(?!\S)))/)) isCollapsible = 1;
+        else if(titleNode.match(/^((\+\s)|(\+(?!\S)))/)) isCollapsible = 2;
+        if(isCollapsible) titleNode = titleNode.replace(/^(([+-]\s)|([+-](?!\S)))/, "");
+        else titleNode = titleNode.replace(/^[ \r\t]/, "");
+        title = titleNode;
 
-            tags.forEach((value) => {
-                if(value.toUpperCase().startsWith("TITLE ")) {
-                    var color = value.match(/TITLE ((\d+,){3}[\d.]+)/);
-                    if(color) titleColor = color[1];
-                    else titleColor = value.match(/TITLE (\w+)/)[1];
-                } else if(value.toUpperCase().startsWith("BACKGROUND ")) {
-                    var color = value.match(/BACKGROUND ((\d+,){3}[\d.]+)/);
-                    if(color) backgroundColor = color[1];
-                    else backgroundColor = value.match(/BACKGROUND (\w+)/)[1];
-                } else if(value.toUpperCase().startsWith("ICON ")) {
-                    icon = value.match(/ICON ([\w+\- ]+)/)[1];
-                }
-            });
-
-            const callout = document.createElement('div');
-            callout.className = `callout callout-${typeName.toLowerCase()}${isCollapsible == 1 ? ' callout-collapsed' : ''}`;
-            callout.style.backgroundColor = `rgba(${backgroundColor})`;
-            callout.style.borderLeftColor = `rgba(${titleColor})`;
-
-            const header = document.createElement('div');
-            header.className = 'callout-header';
-            header.style.color = `rgba(${titleColor})`;
-
-            const icon_ = document.createElement('div');
-            icon_.className = 'callout-icon';
-            var tmp = document.createElement('i');
-            if(icon.startsWith("<svg")) {
-                icon_.appendChild(parseElement(icon));
-            } else {
-                tmp.className = icon;
-                icon_.appendChild(tmp);
+        tags.forEach((value) => {
+            if(!value.startsWith("TITLE") && !value.startsWith("BACKGROUND") && !value.startsWith("ICON")) {
+                typeName = value;
             }
+        });
 
-            const titleElement = document.createElement('div');
-            titleElement.className = 'callout-title';
-            titleElement.innerHTML = title;
+        if(!title) title = typeName;
+        titleColor = this.getColor(this.getType(typeName));
+        backgroundColor = this.getBackgoundColor(this.getType(typeName));
+        icon = this.getIcon(this.getType(typeName));
 
-            header.appendChild(icon_);
-            header.appendChild(titleElement);
+        tags.forEach((value) => {
+            if(value.toUpperCase().startsWith("TITLE ")) {
+                var color = value.match(/TITLE ((\d+,){3}[\d.]+)/);
+                if(color) titleColor = color[1];
+                else titleColor = value.match(/TITLE (\w+)/)[1];
+            } else if(value.toUpperCase().startsWith("BACKGROUND ")) {
+                var color = value.match(/BACKGROUND ((\d+,){3}[\d.]+)/);
+                if(color) backgroundColor = color[1];
+                else backgroundColor = value.match(/BACKGROUND (\w+)/)[1];
+            } else if(value.toUpperCase().startsWith("ICON ")) {
+                icon = value.match(/ICON ([\w+\- ]+)/)[1];
+            }
+        });
 
-            if (isCollapsible) {
-                const toggle = document.createElement('div');
-                toggle.className = 'callout-toggle fas fa-chevron-down';
-                header.appendChild(toggle);
-                
-                header.addEventListener('click', () => {
-                    // 当前状态是否已折叠
-                    const isNowCollapsed = callout.classList.contains('callout-collapsed');
-                    
-                    if (isNowCollapsed) {
-                        this.handleLazyLoadImages(callout, true);
-                        requestAnimationFrame(() => {
-                            callout.classList.remove('callout-collapsed');
-                        });
-                        
-                    } else {
-                        callout.classList.add('callout-collapsed');
-                        setTimeout(() => {
-                            // 再次检查状态，防止用户快速点击导致的状态不一致
-                            if(callout.classList.contains('callout-collapsed')) {
-                                this.handleLazyLoadImages(callout, false);
-                            }
-                        }, 400); 
-                    }
-                });
-                
-                // 如果默认是折叠的，确保图片是隐藏的
-                if (isCollapsible == 1) {
+        const callout = document.createElement('div');
+        callout.className = `callout callout-${typeName.toLowerCase()}${isCollapsible == 1 ? ' callout-collapsed' : ''}`;
+        callout.style.backgroundColor = `rgba(${backgroundColor})`;
+        callout.style.borderLeftColor = `rgba(${titleColor})`;
+
+        const header = document.createElement('div');
+        header.className = 'callout-header';
+        header.style.color = `rgba(${titleColor})`;
+
+        const icon_ = document.createElement('div');
+        icon_.className = 'callout-icon';
+        var tmp = document.createElement('i');
+        if(icon.startsWith("<svg")) {
+            icon_.appendChild(parseElement(icon));
+        } else {
+            tmp.className = icon;
+            icon_.appendChild(tmp);
+        }
+
+        const titleElement = document.createElement('div');
+        titleElement.className = 'callout-title';
+        titleElement.innerHTML = title;
+
+        header.appendChild(icon_);
+        header.appendChild(titleElement);
+
+        if (isCollapsible) {
+            const toggle = document.createElement('div');
+            toggle.className = 'callout-toggle fas fa-chevron-down';
+            header.appendChild(toggle);
+
+            header.addEventListener('click', () => {
+                const isNowCollapsed = callout.classList.contains('callout-collapsed');
+
+                if (isNowCollapsed) {
+                    callout.classList.remove('callout-collapsed');
                     setTimeout(() => {
-                        this.handleLazyLoadImages(callout, false);
-                    }, 0);
+                        this.triggerLazyLoad();
+                    }, 100);
+                } else {
+                    callout.classList.add('callout-collapsed');
                 }
+            });
+        }
+
+        // 直接移动原始 DOM 节点，保留所有事件绑定
+        const contentElement = document.createElement('div');
+        contentElement.className = 'callout-content';
+
+        // 移动所有子节点，但跳过标题节点
+        children.forEach(el => {
+            if (el === firstParagraph) {
+                return;
             }
+            contentElement.appendChild(el);
+        });
 
-            const contentElement = document.createElement('div');
-            contentElement.className = 'callout-content';
-            contentElement.innerHTML = contentNode;
+        callout.appendChild(header);
+        callout.appendChild(contentElement);
 
-            callout.appendChild(header);
-            callout.appendChild(contentElement);
+        if(blockquote.parentNode) {
+            blockquote.parentNode.replaceChild(callout, blockquote);
+        }
 
-            if(blockquote.parentNode) {
-                blockquote.parentNode.replaceChild(callout, blockquote);
-            }
+        // 如果不是初始折叠状态，触发懒加载
+        if (!isCollapsible || isCollapsible === 2) {
+            setTimeout(() => {
+                this.triggerLazyLoad();
+            }, 100);
+        }
 
-            // 如果不是初始折叠状态，立即触发懒加载
-            if (!isCollapsible || isCollapsible === 2) {
-                setTimeout(() => {
-                    this.triggerLazyLoad(callout);
-                }, 100);
-            }
-
-            // 递归处理嵌套的blockquotes
-            const nestedBlockquotes = callout.querySelectorAll('blockquote');
-            if (nestedBlockquotes.length > 0) {
-                nestedBlockquotes.forEach(blockquote => {
-                    this.processBlockquote(blockquote);
-                });
-            }
+        // 递归处理嵌套的blockquotes
+        const nestedBlockquotes = callout.querySelectorAll('blockquote');
+        if (nestedBlockquotes.length > 0) {
+            nestedBlockquotes.forEach(blockquote => {
+                this.processBlockquote(blockquote);
+            });
         }
     },
-    
+
     adjustColor: function(color, amount) {
         return '#' + color.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount * 255)).toString(16)).substr(-2));
     },
-    
+
     createBlockquotes: function() {
         const blockquotes = document.querySelectorAll('blockquote');
-        blockquotes.forEach(blockquote => {
-            this.processBlockquote(blockquote);
+
+        // 先隐藏所有 blockquote，避免闪烁
+        blockquotes.forEach(bq => {
+            bq.style.opacity = '0';
+            bq.style.transition = 'none';
+        });
+
+        // 使用 requestAnimationFrame 确保隐藏生效后再处理
+        requestAnimationFrame(() => {
+            blockquotes.forEach((blockquote) => {
+                this.processBlockquote(blockquote);
+            });
+
+            // 显示所有 callout
+            setTimeout(() => {
+                const callouts = document.querySelectorAll('.callout');
+                callouts.forEach(callout => {
+                    callout.style.opacity = '0';
+                    callout.style.transition = 'opacity 0.3s ease';
+                    requestAnimationFrame(() => {
+                        callout.style.opacity = '1';
+                    });
+                });
+            }, 50);
         });
 
         // 所有callout处理完成后，触发一次懒加载更新
         setTimeout(() => {
-            this.triggerLazyLoad(document.body);
+            this.triggerLazyLoad();
         }, 200);
     }
 };
 
 const CalloutExpot = {
-    init: Callout.init,
-    createBlockquotes: Callout.createBlockquotes,
+    init: Callout.init.bind(Callout),
+    createBlockquotes: Callout.createBlockquotes.bind(Callout),
 }
 
-// 延迟初始化，确保DOM完全加载
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+// 延迟初始化，确保主题的懒加载已完成
+function initCallout() {
+    setTimeout(() => {
         Callout.init();
-    });
+    }, 100);
+}
+
+if (document.readyState === 'complete') {
+    initCallout();
 } else {
-    Callout.init();
+    window.addEventListener('load', () => {
+        initCallout();
+    });
 }
 
 document.Callout = CalloutExpot;
